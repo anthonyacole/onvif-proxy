@@ -79,14 +79,34 @@ impl DeviceService {
             "event_service",
             "ptz_service",
             "imaging_service",
+            "analytics_service",
+            "deviceIO_service",
+            "Media2",
         ];
 
         for service in services {
-            // Match patterns like: <XAddr>http://192.168.30.11:8000/onvif/device_service</XAddr>
-            // Replace with: <XAddr>http://proxy:8000/onvif/camera-01/device_service</XAddr>
-            let old_pattern = format!("/onvif/{}", service);
-            let new_pattern = format!("{}/onvif/{}/{}", base_url, camera_id, service);
-            result = result.replace(&old_pattern, &new_pattern);
+            // Match full URL patterns like: http://192.168.30.11:8000/onvif/device_service
+            // We need to replace the entire URL, not just the path, to avoid concatenation
+            // Look for pattern: http://[anything]/onvif/[service]
+            let path_pattern = format!("/onvif/{}", service);
+
+            // Find all occurrences and replace the full URL
+            let mut search_start = 0;
+            while let Some(pos) = result[search_start..].find(&path_pattern) {
+                let abs_pos = search_start + pos;
+
+                // Find the start of the URL by searching backwards for "http://" or "https://"
+                let before_path = &result[..abs_pos];
+                if let Some(url_start) = before_path.rfind("http://").or_else(|| before_path.rfind("https://")) {
+                    // Extract and replace the full URL
+                    let old_url = &result[url_start..abs_pos + path_pattern.len()];
+                    let new_url = format!("{}/onvif/{}/{}", base_url, camera_id, service);
+                    result = result.replace(old_url, &new_url);
+                    search_start = url_start + new_url.len();
+                } else {
+                    search_start = abs_pos + path_pattern.len();
+                }
+            }
         }
 
         result
