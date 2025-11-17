@@ -14,6 +14,8 @@ pub struct ProxyConfig {
     pub base_path: String,
     #[serde(default = "default_log_level")]
     pub log_level: String,
+    #[serde(default)]
+    pub base_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

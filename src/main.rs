@@ -39,22 +39,30 @@ async fn main() -> Result<()> {
     }
 
     // Determine base URL for the proxy
-    let base_url = std::env::var("BASE_URL").unwrap_or_else(|_| {
-        // Extract port from listen_address
-        let port = config
-            .proxy
-            .listen_address
-            .split(':')
-            .nth(1)
-            .unwrap_or("8000");
+    // Priority: config file > environment variable > auto-detect
+    let base_url = config
+        .proxy
+        .base_url
+        .clone()
+        .or_else(|| std::env::var("BASE_URL").ok())
+        .unwrap_or_else(|| {
+            // Auto-detect: extract port from listen_address
+            let port = config
+                .proxy
+                .listen_address
+                .split(':')
+                .nth(1)
+                .unwrap_or("8000");
 
-        // Try to get local IP, fallback to localhost
-        let ip = local_ip_address::local_ip()
-            .map(|ip| ip.to_string())
-            .unwrap_or_else(|_| "127.0.0.1".to_string());
+            // Try to get local IP, fallback to localhost
+            let ip = local_ip_address::local_ip()
+                .map(|ip| ip.to_string())
+                .unwrap_or_else(|_| "127.0.0.1".to_string());
 
-        format!("http://{}:{}", ip, port)
-    });
+            let url = format!("http://{}:{}", ip, port);
+            tracing::info!("Auto-detected base URL: {}", url);
+            url
+        });
 
     tracing::info!("Proxy base URL: {}", base_url);
 

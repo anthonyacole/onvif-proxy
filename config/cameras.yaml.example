@@ -1,7 +1,10 @@
 proxy:
-  listen_address: "0.0.0.0:8000"
+  listen_address: "0.0.0.0:8080"
   base_path: "/onvif"
   log_level: "info"
+  # Optional: Specify the base URL for service endpoint rewriting
+  # If not set, will try BASE_URL environment variable, then auto-detect local IP
+  # base_url: "http://192.168.1.50:8080"
 
 cameras:
   - id: "camera-01"
