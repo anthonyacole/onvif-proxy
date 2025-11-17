@@ -142,6 +142,23 @@ impl SoapEnvelope {
                     }
                     raw_xml.push('>');
                 }
+                Ok(Event::Empty(e)) => {
+                    // Handle self-closing tags like <GetProfiles/>
+                    let tag_name = String::from_utf8_lossy(e.local_name().as_ref()).to_string();
+
+                    if depth == 1 {
+                        // This is a self-closing action element in Body
+                        action = tag_name.clone();
+                    }
+
+                    raw_xml.push_str(&format!("<{}", tag_name));
+                    for attr in e.attributes().flatten() {
+                        let key = String::from_utf8_lossy(attr.key.as_ref());
+                        let value = String::from_utf8_lossy(&attr.value);
+                        raw_xml.push_str(&format!(" {}=\"{}\"", key, value));
+                    }
+                    raw_xml.push_str("/>");
+                }
                 Ok(Event::End(e)) => {
                     depth -= 1;
                     if depth == 0 {
