@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
+    http::{StatusCode, header},
     response::{IntoResponse, Response},
     routing::post,
     Router,
@@ -9,6 +9,16 @@ use axum::{
 use crate::camera::CameraManager;
 use crate::onvif::{device, media, events, soap::SoapEnvelope};
 use crate::translator::ResponseTranslator;
+
+// Helper function to create SOAP response with correct content-type
+fn soap_response(xml: String) -> Response {
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/soap+xml; charset=utf-8")],
+        xml,
+    )
+        .into_response()
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -94,7 +104,7 @@ async fn handle_device_service(
                 }
             };
 
-            (StatusCode::OK, translated).into_response()
+            soap_response(translated)
         }
         Err(e) => {
             tracing::error!("Device service error: {}", e);
@@ -159,7 +169,7 @@ async fn handle_media_service(
                 }
             };
 
-            (StatusCode::OK, translated).into_response()
+            soap_response(translated)
         }
         Err(e) => {
             tracing::error!("Media service error: {}", e);
@@ -232,7 +242,7 @@ async fn handle_events_service(
                 }
             };
 
-            (StatusCode::OK, translated).into_response()
+            soap_response(translated)
         }
         Err(e) => {
             tracing::error!("Events service error: {}", e);
@@ -284,7 +294,7 @@ async fn handle_subscription(
     };
 
     match response {
-        Ok(xml) => (StatusCode::OK, xml).into_response(),
+        Ok(xml) => soap_response(xml),
         Err(e) => {
             tracing::error!("Subscription error: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, format!("Error: {}", e)).into_response()
