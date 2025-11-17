@@ -149,12 +149,13 @@ async fn handle_media_service(
         }
         "GetStreamUri" => {
             // Extract profile token and protocol from request
-            let profile_token = extract_value(&body, "ProfileToken").unwrap_or("Profile_1".to_string());
+            let profile_token = extract_value(&body, "ProfileToken").unwrap_or("000".to_string());
             let protocol = extract_value(&body, "Protocol").unwrap_or("RTSP".to_string());
+            tracing::info!("GetStreamUri: profile_token={}, protocol={}", profile_token, protocol);
             media::MediaService::get_stream_uri(&camera, &profile_token, &protocol).await
         }
         "GetSnapshotUri" => {
-            let profile_token = extract_value(&body, "ProfileToken").unwrap_or("Profile_1".to_string());
+            let profile_token = extract_value(&body, "ProfileToken").unwrap_or("000".to_string());
             media::MediaService::get_snapshot_uri(&camera, &profile_token).await
         }
         _ => {
@@ -165,6 +166,7 @@ async fn handle_media_service(
 
     match response {
         Ok(xml) => {
+            tracing::debug!("Raw media response: {}", xml);
             let quirks = camera.config().quirks.clone();
             let translated = match ResponseTranslator::translate(&xml, &camera.config().model, &quirks) {
                 Ok(t) => t,
@@ -173,6 +175,7 @@ async fn handle_media_service(
                     xml
                 }
             };
+            tracing::debug!("Translated media response: {}", translated);
 
             soap_response(translated)
         }
