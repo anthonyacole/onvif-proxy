@@ -1,0 +1,43 @@
+[package]
+name = "onvif-proxy"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web server framework
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace", "cors"] }
+
+# SOAP/XML handling
+quick-xml = { version = "0.36", features = ["serialize"] }
+serde = { version = "1", features = ["derive"] }
+serde-xml-rs = "0.6"
+
+# HTTP client (to communicate with cameras)
+reqwest = { version = "0.12", features = ["default-tls"] }
+
+# Configuration management
+config = "0.14"
+serde_yaml = "0.9"
+
+# Authentication/Security (WS-UsernameToken)
+sha1 = "0.10"
+base64 = "0.22"
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Async utilities
+futures = "0.3"
+
+[dev-dependencies]
+tokio-test = "0.4"

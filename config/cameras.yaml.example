@@ -1,0 +1,29 @@
+proxy:
+  listen_address: "0.0.0.0:8000"
+  base_path: "/onvif"
+  log_level: "info"
+
+cameras:
+  - id: "camera-01"
+    name: "Front Door Camera"
+    address: "192.168.1.100:80"
+    username: "admin"
+    password: "your_password_here"
+    model: "reolink"
+    enable_smart_detection: true
+    quirks:
+      - fix_device_info_namespace
+      - normalize_media_profiles
+      - translate_smart_events
+
+  # Add more cameras as needed
+  # - id: "camera-02"
+  #   name: "Backyard Camera"
+  #   address: "192.168.1.101:80"
+  #   username: "admin"
+  #   password: "your_password_here"
+  #   model: "reolink"
+  #   enable_smart_detection: true
+  #   quirks:
+  #     - fix_device_info_namespace
+  #     - translate_smart_events
