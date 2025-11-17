@@ -145,6 +145,25 @@ async fn handle_media_service(
     let action = envelope.extract_action();
     tracing::info!("Media action: {}", action);
 
+    // Check if this is a Media2 (ver20) request sent to Media ver10 endpoint
+    // iSpy sometimes sends ver20 actions to the ver10 endpoint
+    if action.contains("ver20/media") || body.contains("http://www.onvif.org/ver20/media/wsdl") {
+        tracing::info!("Detected Media2 (ver20) action on Media ver10 endpoint, routing to Media2");
+        let soap_body = &envelope.body._raw_xml;
+        let response = camera.send_soap_request("/onvif/Media2", soap_body).await;
+
+        return match response {
+            Ok(xml) => {
+                tracing::debug!("Raw Media2 response: {}", xml);
+                soap_response(xml)
+            }
+            Err(e) => {
+                tracing::error!("Media2 service error: {}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, format!("Error: {}", e)).into_response()
+            }
+        };
+    }
+
     let response = match action.as_str() {
         "GetProfiles" => {
             media::MediaService::get_profiles(&camera).await
