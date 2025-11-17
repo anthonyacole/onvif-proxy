@@ -44,6 +44,7 @@ async fn main() -> Result<()> {
         .proxy
         .base_url
         .clone()
+        .filter(|s| !s.trim().is_empty()) // Treat empty strings as None
         .or_else(|| std::env::var("BASE_URL").ok())
         .unwrap_or_else(|| {
             // Auto-detect: extract port from listen_address
