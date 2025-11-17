@@ -1,34 +1,33 @@
-use quick_xml::events::{BytesStart, Event};
-use quick_xml::{Reader, Writer};
-use std::io::Cursor;
+use quick_xml::events::Event;
+use quick_xml::Reader;
 use anyhow::{Context, Result};
 
 #[derive(Debug, Clone)]
 pub struct SoapEnvelope {
-    pub header: Option<SoapHeader>,
+    pub _header: Option<SoapHeader>,
     pub body: SoapBody,
-    pub namespaces: Vec<(String, String)>,
+    pub _namespaces: Vec<(String, String)>,
 }
 
 #[derive(Debug, Clone)]
 pub struct SoapHeader {
-    pub security: Option<WsSecurity>,
-    pub raw_xml: String,
+    pub _security: Option<WsSecurity>,
+    pub _raw_xml: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct WsSecurity {
-    pub username: String,
-    pub password_digest: String,
-    pub nonce: String,
-    pub created: String,
+    pub _username: String,
+    pub _password_digest: String,
+    pub _nonce: String,
+    pub _created: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct SoapBody {
     pub action: String,
-    pub content: String,
-    pub raw_xml: String,
+    pub _content: String,
+    pub _raw_xml: String,
 }
 
 impl SoapEnvelope {
@@ -44,21 +43,27 @@ impl SoapEnvelope {
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(e)) => {
-                    if e.name().as_ref() == b"Envelope" {
-                        // Extract namespaces from Envelope element
-                        for attr in e.attributes() {
-                            if let Ok(attr) = attr {
-                                let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
-                                let value = String::from_utf8_lossy(&attr.value).to_string();
-                                if key.starts_with("xmlns") {
-                                    namespaces.push((key, value));
+                    // Check local name without namespace prefix
+                    match e.local_name().as_ref() {
+                        b"Envelope" => {
+                            // Extract namespaces from Envelope element
+                            for attr in e.attributes() {
+                                if let Ok(attr) = attr {
+                                    let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
+                                    let value = String::from_utf8_lossy(&attr.value).to_string();
+                                    if key.starts_with("xmlns") {
+                                        namespaces.push((key, value));
+                                    }
                                 }
                             }
                         }
-                    } else if e.name().as_ref() == b"Header" {
-                        header = Some(Self::parse_header(&mut reader)?);
-                    } else if e.name().as_ref() == b"Body" {
-                        body = Some(Self::parse_body(&mut reader)?);
+                        b"Header" => {
+                            header = Some(Self::parse_header(&mut reader)?);
+                        }
+                        b"Body" => {
+                            body = Some(Self::parse_body(&mut reader)?);
+                        }
+                        _ => {}
                     }
                 }
                 Ok(Event::Eof) => break,
@@ -69,9 +74,9 @@ impl SoapEnvelope {
         }
 
         Ok(SoapEnvelope {
-            header,
+            _header: header,
             body: body.context("SOAP Body not found")?,
-            namespaces,
+            _namespaces: namespaces,
         })
     }
 
@@ -104,8 +109,8 @@ impl SoapEnvelope {
         }
 
         Ok(SoapHeader {
-            security: None,
-            raw_xml,
+            _security: None,
+            _raw_xml: raw_xml,
         })
     }
 
@@ -161,58 +166,9 @@ impl SoapEnvelope {
 
         Ok(SoapBody {
             action,
-            content,
-            raw_xml,
+            _content: content,
+            _raw_xml: raw_xml,
         })
-    }
-
-    pub fn create_response(action: String, body_content: String) -> Self {
-        let namespaces = vec![
-            ("xmlns:SOAP-ENV".to_string(), "http://www.w3.org/2003/05/soap-envelope".to_string()),
-            ("xmlns:tds".to_string(), "http://www.onvif.org/ver10/device/wsdl".to_string()),
-            ("xmlns:trt".to_string(), "http://www.onvif.org/ver10/media/wsdl".to_string()),
-            ("xmlns:tev".to_string(), "http://www.onvif.org/ver10/events/wsdl".to_string()),
-            ("xmlns:tt".to_string(), "http://www.onvif.org/ver10/schema".to_string()),
-            ("xmlns:tns1".to_string(), "http://www.onvif.org/ver10/topics".to_string()),
-        ];
-
-        SoapEnvelope {
-            header: None,
-            body: SoapBody {
-                action: format!("{}Response", action),
-                content: body_content.clone(),
-                raw_xml: format!("<{}Response>{}</{}Response>", action, body_content, action),
-            },
-            namespaces,
-        }
-    }
-
-    pub fn to_xml(&self) -> Result<String> {
-        let mut xml = String::new();
-        xml.push_str(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
-        xml.push_str("<SOAP-ENV:Envelope");
-
-        // Add namespaces
-        for (key, value) in &self.namespaces {
-            xml.push_str(&format!(r#" {}="{}""#, key, value));
-        }
-        xml.push('>');
-
-        // Add header if present
-        if let Some(header) = &self.header {
-            xml.push_str("<SOAP-ENV:Header>");
-            xml.push_str(&header.raw_xml);
-            xml.push_str("</SOAP-ENV:Header>");
-        }
-
-        // Add body
-        xml.push_str("<SOAP-ENV:Body>");
-        xml.push_str(&self.body.raw_xml);
-        xml.push_str("</SOAP-ENV:Body>");
-
-        xml.push_str("</SOAP-ENV:Envelope>");
-
-        Ok(xml)
     }
 
     pub fn extract_action(&self) -> String {

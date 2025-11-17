@@ -13,23 +13,4 @@ impl ResponseTranslator {
             }
         }
     }
-
-    pub fn ensure_valid_soap(xml: &str) -> Result<String> {
-        let mut fixed = xml.to_string();
-
-        // Ensure XML declaration is present
-        if !fixed.starts_with("<?xml") {
-            fixed = format!(r#"<?xml version="1.0" encoding="UTF-8"?>{}"#, fixed);
-        }
-
-        // Ensure SOAP envelope namespace is present
-        if !fixed.contains("xmlns:SOAP-ENV=") {
-            fixed = fixed.replace(
-                "<SOAP-ENV:Envelope",
-                r#"<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope""#,
-            );
-        }
-
-        Ok(fixed)
-    }
 }

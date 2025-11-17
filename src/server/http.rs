@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use axum::Router;
 use std::net::SocketAddr;
 use tower_http::trace::TraceLayer;
 

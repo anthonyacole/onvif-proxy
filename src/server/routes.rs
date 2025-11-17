@@ -5,7 +5,6 @@ use axum::{
     routing::post,
     Router,
 };
-use std::sync::Arc;
 
 use crate::camera::CameraManager;
 use crate::onvif::{device, media, events, soap::SoapEnvelope};

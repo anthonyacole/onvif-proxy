@@ -8,9 +8,9 @@ use chrono::Utc;
 
 #[derive(Debug, Clone)]
 pub struct Subscription {
-    pub subscription_ref: String,
-    pub camera_id: String,
-    pub created_at: chrono::DateTime<Utc>,
+    pub _subscription_ref: String,
+    pub _camera_id: String,
+    pub _created_at: chrono::DateTime<Utc>,
     pub expires_at: chrono::DateTime<Utc>,
 }
 
@@ -54,9 +54,9 @@ impl EventsService {
         // Extract subscription reference from response and rewrite it to point to our proxy
         let subscription_ref = Uuid::new_v4().to_string();
         let subscription = Subscription {
-            subscription_ref: subscription_ref.clone(),
-            camera_id: camera.camera_id().to_string(),
-            created_at: Utc::now(),
+            _subscription_ref: subscription_ref.clone(),
+            _camera_id: camera.camera_id().to_string(),
+            _created_at: Utc::now(),
             expires_at: Utc::now() + chrono::Duration::seconds(600),
         };
 

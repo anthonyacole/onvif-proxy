@@ -146,59 +146,6 @@ impl ReolinkEventTranslator {
         // Fallback: just return original if we can't find the envelope
         xml.to_string()
     }
-
-    pub fn fix_namespace_errors(xml: &str) -> String {
-        // This is a catch-all function to fix common namespace errors
-        let mut fixed = Self::add_missing_namespaces(xml);
-
-        // Remove duplicate namespace declarations (can happen after multiple fixes)
-        fixed = Self::remove_duplicate_namespaces(&fixed);
-
-        fixed
-    }
-
-    fn remove_duplicate_namespaces(xml: &str) -> String {
-        let mut result = xml.to_string();
-        let mut _seen_namespaces: std::collections::HashSet<String> = std::collections::HashSet::new();
-
-        // This is a simplified approach - in production you'd use proper XML parsing
-        let namespaces = vec!["tds", "trt", "tev", "tt", "tns1", "wsnt", "SOAP-ENV"];
-
-        for ns in namespaces {
-            let xmlns_pattern = format!("xmlns:{}=", ns);
-            let count = result.matches(&xmlns_pattern).count();
-
-            if count > 1 {
-                // Keep only the first occurrence
-                let mut first = true;
-                while let Some(pos) = result.find(&xmlns_pattern) {
-                    if first {
-                        first = false;
-                        // Find the end of this namespace declaration
-                        if let Some(quote_end) = result[pos..].find('"') {
-                            if let Some(second_quote) = result[pos + quote_end + 1..].find('"') {
-                                let skip_pos = pos + quote_end + second_quote + 2;
-                                result = format!("{}{}", &result[..skip_pos], &result[skip_pos..]);
-                                continue;
-                            }
-                        }
-                    } else {
-                        // Remove duplicate
-                        if let Some(quote_end) = result[pos..].find('"') {
-                            if let Some(second_quote) = result[pos + quote_end + 1..].find('"') {
-                                let end_pos = pos + quote_end + second_quote + 2;
-                                result = format!("{}{}", &result[..pos], &result[end_pos..].trim_start());
-                                continue;
-                            }
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-
-        result
-    }
 }
 
 #[cfg(test)]

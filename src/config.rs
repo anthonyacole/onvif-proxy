@@ -49,10 +49,6 @@ impl AppConfig {
 
         Ok(config)
     }
-
-    pub fn get_camera(&self, camera_id: &str) -> Option<&CameraConfig> {
-        self.cameras.iter().find(|c| c.id == camera_id)
-    }
 }
 
 impl CameraConfig {

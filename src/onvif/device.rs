@@ -4,7 +4,7 @@ use anyhow::Result;
 pub struct DeviceService;
 
 impl DeviceService {
-    pub async fn get_device_information(camera: &CameraClient, base_url: &str) -> Result<String> {
+    pub async fn get_device_information(camera: &CameraClient, _base_url: &str) -> Result<String> {
         let request_body = r#"<tds:GetDeviceInformation xmlns:tds="http://www.onvif.org/ver10/device/wsdl"/>"#;
 
         let response = camera
