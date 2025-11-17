@@ -77,6 +77,9 @@ async fn handle_device_service(
     }
 
     let response = match action.as_str() {
+        "GetSystemDateAndTime" => {
+            device::DeviceService::get_system_date_and_time(&camera).await
+        }
         "GetDeviceInformation" => {
             device::DeviceService::get_device_information(&camera, &state.base_url).await
         }
