@@ -33,6 +33,8 @@ pub fn create_router(state: AppState) -> Router {
         .route("/onvif/:camera_id/device_service", post(handle_device_service))
         // Media service endpoints
         .route("/onvif/:camera_id/media_service", post(handle_media_service))
+        // Media2 service endpoints (ONVIF ver20)
+        .route("/onvif/:camera_id/Media2", post(handle_media2_service))
         // Events service endpoints
         .route("/onvif/:camera_id/event_service", post(handle_events_service))
         // Subscription endpoints
@@ -181,6 +183,50 @@ async fn handle_media_service(
         }
         Err(e) => {
             tracing::error!("Media service error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Error: {}", e)).into_response()
+        }
+    }
+}
+
+async fn handle_media2_service(
+    State(state): State<AppState>,
+    Path(camera_id): Path<String>,
+    body: String,
+) -> Response {
+    tracing::info!("Media2 service request for camera: {}", camera_id);
+    tracing::debug!("Request body: {}", body);
+
+    let camera = match state.camera_manager.get_camera(&camera_id).await {
+        Some(cam) => cam,
+        None => {
+            return (StatusCode::NOT_FOUND, "Camera not found").into_response();
+        }
+    };
+
+    // Parse the SOAP envelope to extract the body content
+    let envelope = match SoapEnvelope::parse(&body) {
+        Ok(env) => env,
+        Err(e) => {
+            tracing::error!("Failed to parse SOAP request: {}", e);
+            return (StatusCode::BAD_REQUEST, format!("Invalid SOAP: {}", e)).into_response();
+        }
+    };
+
+    let action = envelope.extract_action();
+    tracing::info!("Media2 action: {}", action);
+
+    // Extract the body content to forward to the camera
+    // Media2 uses ver20 structure, passthrough to camera's Media2 endpoint
+    let soap_body = &envelope.body._raw_xml;
+    let response = camera.send_soap_request("/onvif/Media2", soap_body).await;
+
+    match response {
+        Ok(xml) => {
+            tracing::debug!("Raw Media2 response: {}", xml);
+            soap_response(xml)
+        }
+        Err(e) => {
+            tracing::error!("Media2 service error: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, format!("Error: {}", e)).into_response()
         }
     }
