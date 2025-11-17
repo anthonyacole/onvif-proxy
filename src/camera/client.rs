@@ -28,19 +28,20 @@ impl CameraClient {
     pub async fn send_soap_request(&self, service_path: &str, soap_body: &str) -> Result<String> {
         let url = format!("{}{}", self.config.base_url(), service_path);
 
-        // Create SOAP envelope
-        let soap_envelope = format!(
+        // Create SOAP envelope with WS-Security header
+        let security_header = self.auth.generate_header();
+        let authenticated_soap = format!(
             r#"<?xml version="1.0" encoding="UTF-8"?>
-<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope" xmlns:tds="http://www.onvif.org/ver10/device/wsdl" xmlns:trt="http://www.onvif.org/ver10/media/wsdl" xmlns:tev="http://www.onvif.org/ver10/events/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema">
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope" xmlns:tds="http://www.onvif.org/ver10/device/wsdl" xmlns:trt="http://www.onvif.org/ver10/media/wsdl" xmlns:tev="http://www.onvif.org/ver10/events/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
+<SOAP-ENV:Header>
+{}
+</SOAP-ENV:Header>
 <SOAP-ENV:Body>
 {}
 </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"#,
-            soap_body
+            security_header, soap_body
         );
-
-        // Add WS-Security authentication
-        let authenticated_soap = self.auth.add_to_soap_header(&soap_envelope);
 
         tracing::debug!("Sending SOAP request to {}: {}", url, authenticated_soap);
 

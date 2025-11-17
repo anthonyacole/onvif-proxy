@@ -30,7 +30,7 @@ impl WsSecurityAuth {
         let password_digest = BASE64.encode(digest);
 
         format!(
-            r#"<wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
+            r#"<wsse:Security>
   <wsse:UsernameToken>
     <wsse:Username>{}</wsse:Username>
     <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest">{}</wsse:Password>
@@ -40,30 +40,6 @@ impl WsSecurityAuth {
 </wsse:Security>"#,
             self.username, password_digest, nonce_base64, created
         )
-    }
-
-    pub fn add_to_soap_header(&self, soap_xml: &str) -> String {
-        let security_header = self.generate_header();
-
-        // If SOAP envelope already has a header, insert Security into it
-        if soap_xml.contains("<SOAP-ENV:Header>") {
-            soap_xml.replace(
-                "<SOAP-ENV:Header>",
-                &format!("<SOAP-ENV:Header>{}", security_header),
-            )
-        } else {
-            // Insert new header after Envelope opening tag
-            soap_xml.replace(
-                "<SOAP-ENV:Envelope",
-                &format!(
-                    "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://www.w3.org/2003/05/soap-envelope\">\n<SOAP-ENV:Header>{}</SOAP-ENV:Header>",
-                    security_header
-                ).as_str(),
-            ).replace(
-                ">\n<SOAP-ENV:Header>",
-                ">"
-            )
-        }
     }
 }
 

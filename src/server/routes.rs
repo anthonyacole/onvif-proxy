@@ -60,6 +60,12 @@ async fn handle_device_service(
     let action = envelope.extract_action();
     tracing::info!("Device action: {}", action);
 
+    // Handle empty action (probe requests)
+    if action.is_empty() {
+        tracing::debug!("Empty action - likely a probe request");
+        return (StatusCode::OK, "OK").into_response();
+    }
+
     let response = match action.as_str() {
         "GetDeviceInformation" => {
             device::DeviceService::get_device_information(&camera, &state.base_url).await
