@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "onvif_proxy=info,tower_http=debug".into()),
+                .unwrap_or_else(|_| "onvif_proxy=info,tower_http=warn,reqwest=warn,hyper=warn".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();

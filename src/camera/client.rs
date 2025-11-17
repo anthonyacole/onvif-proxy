@@ -43,7 +43,7 @@ impl CameraClient {
             security_header, soap_body
         );
 
-        tracing::debug!("Sending SOAP request to {}: {}", url, authenticated_soap);
+        tracing::trace!("Sending SOAP request to {}: {}", url, authenticated_soap);
 
         let response = self
             .http_client
@@ -64,7 +64,7 @@ impl CameraClient {
             tracing::warn!("Camera returned error status {}: {}", status, response_text);
         }
 
-        tracing::debug!("Received SOAP response from camera: {}", response_text);
+        tracing::trace!("Received SOAP response from camera: {}", response_text);
 
         Ok(response_text)
     }

@@ -49,8 +49,8 @@ async fn handle_device_service(
     Path(camera_id): Path<String>,
     body: String,
 ) -> Response {
-    tracing::info!("Device service request for camera: {}", camera_id);
-    tracing::debug!("Request body: {}", body);
+    tracing::debug!("Device service request for camera: {}", camera_id);
+    tracing::trace!("Request body: {}", body);
 
     let camera = match state.camera_manager.get_camera(&camera_id).await {
         Some(cam) => cam,
@@ -70,11 +70,11 @@ async fn handle_device_service(
     };
 
     let action = envelope.extract_action();
-    tracing::info!("Device action: {}", action);
+    tracing::debug!("Device action: {}", action);
 
     // Handle empty action (probe requests)
     if action.is_empty() {
-        tracing::debug!("Empty action - likely a probe request");
+        tracing::trace!("Empty action - likely a probe request");
         return (StatusCode::OK, "OK").into_response();
     }
 
@@ -99,7 +99,7 @@ async fn handle_device_service(
 
     match response {
         Ok(xml) => {
-            tracing::debug!("Raw device response: {}", xml);
+            tracing::trace!("Raw device response: {}", xml);
             // Apply translation quirks
             let quirks = camera.config().quirks.clone();
             let translated = match ResponseTranslator::translate(&xml, &camera.config().model, &quirks) {
@@ -109,7 +109,7 @@ async fn handle_device_service(
                     xml
                 }
             };
-            tracing::debug!("Translated device response: {}", translated);
+            tracing::trace!("Translated device response: {}", translated);
 
             soap_response(translated)
         }
@@ -125,8 +125,8 @@ async fn handle_media_service(
     Path(camera_id): Path<String>,
     body: String,
 ) -> Response {
-    tracing::info!("Media service request for camera: {}", camera_id);
-    tracing::debug!("Request body: {}", body);
+    tracing::debug!("Media service request for camera: {}", camera_id);
+    tracing::trace!("Request body: {}", body);
 
     let camera = match state.camera_manager.get_camera(&camera_id).await {
         Some(cam) => cam,
@@ -143,18 +143,18 @@ async fn handle_media_service(
     };
 
     let action = envelope.extract_action();
-    tracing::info!("Media action: {}", action);
+    tracing::debug!("Media action: {}", action);
 
     // Check if this is a Media2 (ver20) request sent to Media ver10 endpoint
     // iSpy sometimes sends ver20 actions to the ver10 endpoint
     if action.contains("ver20/media") || body.contains("http://www.onvif.org/ver20/media/wsdl") {
-        tracing::info!("Detected Media2 (ver20) action on Media ver10 endpoint, routing to Media2");
+        tracing::debug!("Detected Media2 (ver20) action on Media ver10 endpoint, routing to Media2");
         let soap_body = &envelope.body._raw_xml;
         let response = camera.send_soap_request("/onvif/Media2", soap_body).await;
 
         return match response {
             Ok(xml) => {
-                tracing::debug!("Raw Media2 response: {}", xml);
+                tracing::trace!("Raw Media2 response: {}", xml);
                 soap_response(xml)
             }
             Err(e) => {
@@ -172,7 +172,7 @@ async fn handle_media_service(
             // Extract profile token and protocol from request
             let profile_token = extract_value(&body, "ProfileToken").unwrap_or("000".to_string());
             let protocol = extract_value(&body, "Protocol").unwrap_or("RTSP".to_string());
-            tracing::info!("GetStreamUri: profile_token={}, protocol={}", profile_token, protocol);
+            tracing::debug!("GetStreamUri: profile_token={}, protocol={}", profile_token, protocol);
             media::MediaService::get_stream_uri(&camera, &profile_token, &protocol).await
         }
         "GetSnapshotUri" => {
@@ -187,7 +187,7 @@ async fn handle_media_service(
 
     match response {
         Ok(xml) => {
-            tracing::debug!("Raw media response: {}", xml);
+            tracing::trace!("Raw media response: {}", xml);
             let quirks = camera.config().quirks.clone();
             let translated = match ResponseTranslator::translate(&xml, &camera.config().model, &quirks) {
                 Ok(t) => t,
@@ -196,7 +196,7 @@ async fn handle_media_service(
                     xml
                 }
             };
-            tracing::debug!("Translated media response: {}", translated);
+            tracing::trace!("Translated media response: {}", translated);
 
             soap_response(translated)
         }
@@ -212,8 +212,8 @@ async fn handle_media2_service(
     Path(camera_id): Path<String>,
     body: String,
 ) -> Response {
-    tracing::info!("Media2 service request for camera: {}", camera_id);
-    tracing::debug!("Request body: {}", body);
+    tracing::debug!("Media2 service request for camera: {}", camera_id);
+    tracing::trace!("Request body: {}", body);
 
     let camera = match state.camera_manager.get_camera(&camera_id).await {
         Some(cam) => cam,
@@ -232,7 +232,7 @@ async fn handle_media2_service(
     };
 
     let action = envelope.extract_action();
-    tracing::info!("Media2 action: {}", action);
+    tracing::debug!("Media2 action: {}", action);
 
     // Extract the body content to forward to the camera
     // Media2 uses ver20 structure, passthrough to camera's Media2 endpoint
@@ -241,7 +241,7 @@ async fn handle_media2_service(
 
     match response {
         Ok(xml) => {
-            tracing::debug!("Raw Media2 response: {}", xml);
+            tracing::trace!("Raw Media2 response: {}", xml);
             // Fix localhost URLs in Media2 responses (GetProfiles, GetStreamUri, etc.)
             let fixed_xml = fix_localhost_urls(&xml, &camera);
             soap_response(fixed_xml)
@@ -258,8 +258,8 @@ async fn handle_events_service(
     Path(camera_id): Path<String>,
     body: String,
 ) -> Response {
-    tracing::info!("Events service request for camera: {}", camera_id);
-    tracing::debug!("Request body: {}", body);
+    tracing::debug!("Events service request for camera: {}", camera_id);
+    tracing::trace!("Request body: {}", body);
 
     let camera = match state.camera_manager.get_camera(&camera_id).await {
         Some(cam) => cam,
@@ -276,7 +276,7 @@ async fn handle_events_service(
     };
 
     let action = envelope.extract_action();
-    tracing::info!("Events action: {}", action);
+    tracing::debug!("Events action: {}", action);
 
     let response = match action.as_str() {
         "GetEventProperties" => {
