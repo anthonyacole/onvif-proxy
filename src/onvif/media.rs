@@ -12,7 +12,10 @@ impl MediaService {
             .await?;
 
         // Fix namespace issues and normalize profile structure
-        let fixed_response = Self::normalize_profiles(&response);
+        let mut fixed_response = Self::normalize_profiles(&response);
+
+        // Fix any localhost URLs in the profile URIs
+        fixed_response = Self::fix_stream_uri_response(&fixed_response, camera);
 
         Ok(fixed_response)
     }
@@ -35,8 +38,8 @@ impl MediaService {
             .send_soap_request("/onvif/media_service", &request_body)
             .await?;
 
-        // Reolink cameras typically return correct RTSP URLs, but we may need to validate
-        let fixed_response = Self::fix_stream_uri_response(&response);
+        // Fix RTSP URLs - Reolink cameras return 127.0.0.1 instead of actual IP
+        let fixed_response = Self::fix_stream_uri_response(&response, camera);
 
         Ok(fixed_response)
     }
@@ -53,7 +56,10 @@ impl MediaService {
             .send_soap_request("/onvif/media_service", &request_body)
             .await?;
 
-        Ok(response)
+        // Fix localhost URLs in snapshot URI
+        let fixed_response = Self::fix_stream_uri_response(&response, camera);
+
+        Ok(fixed_response)
     }
 
     fn normalize_profiles(xml: &str) -> String {
@@ -79,7 +85,7 @@ impl MediaService {
         fixed
     }
 
-    fn fix_stream_uri_response(xml: &str) -> String {
+    fn fix_stream_uri_response(xml: &str, camera: &CameraClient) -> String {
         let mut fixed = xml.to_string();
 
         // Ensure MediaUri has proper namespace
@@ -89,6 +95,25 @@ impl MediaService {
                 r#"<SOAP-ENV:Envelope xmlns:tt="http://www.onvif.org/ver10/schema""#,
             );
         }
+
+        // Fix RTSP URLs - Reolink cameras return 127.0.0.1 or localhost instead of actual IP
+        // Extract the camera's actual IP address from the config
+        let camera_address = &camera.config().address;
+        let camera_ip = if let Some(host) = camera_address.split(':').next() {
+            host
+        } else {
+            camera_address.as_str()
+        };
+
+        // Replace localhost references in RTSP URLs with actual camera IP
+        fixed = fixed.replace("rtsp://127.0.0.1:", &format!("rtsp://{}:", camera_ip));
+        fixed = fixed.replace("rtsp://localhost:", &format!("rtsp://{}:", camera_ip));
+        fixed = fixed.replace("rtsp://0.0.0.0:", &format!("rtsp://{}:", camera_ip));
+
+        // Also fix HTTP URLs for snapshot URIs if they have localhost
+        fixed = fixed.replace("http://127.0.0.1:", &format!("http://{}:", camera_ip));
+        fixed = fixed.replace("http://localhost:", &format!("http://{}:", camera_ip));
+        fixed = fixed.replace("http://0.0.0.0:", &format!("http://{}:", camera_ip));
 
         fixed
     }

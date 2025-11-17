@@ -242,7 +242,9 @@ async fn handle_media2_service(
     match response {
         Ok(xml) => {
             tracing::debug!("Raw Media2 response: {}", xml);
-            soap_response(xml)
+            // Fix localhost URLs in Media2 responses (GetProfiles, GetStreamUri, etc.)
+            let fixed_xml = fix_localhost_urls(&xml, &camera);
+            soap_response(fixed_xml)
         }
         Err(e) => {
             tracing::error!("Media2 service error: {}", e);
@@ -377,6 +379,31 @@ async fn handle_subscription(
 
 async fn health_check() -> impl IntoResponse {
     (StatusCode::OK, "OK")
+}
+
+// Helper function to fix localhost URLs in responses
+fn fix_localhost_urls(xml: &str, camera: &crate::camera::CameraClient) -> String {
+    let mut fixed = xml.to_string();
+
+    // Extract the camera's actual IP address from the config
+    let camera_address = &camera.config().address;
+    let camera_ip = if let Some(host) = camera_address.split(':').next() {
+        host
+    } else {
+        camera_address.as_str()
+    };
+
+    // Replace localhost references in RTSP URLs with actual camera IP
+    fixed = fixed.replace("rtsp://127.0.0.1:", &format!("rtsp://{}:", camera_ip));
+    fixed = fixed.replace("rtsp://localhost:", &format!("rtsp://{}:", camera_ip));
+    fixed = fixed.replace("rtsp://0.0.0.0:", &format!("rtsp://{}:", camera_ip));
+
+    // Also fix HTTP URLs for snapshot URIs if they have localhost
+    fixed = fixed.replace("http://127.0.0.1:", &format!("http://{}:", camera_ip));
+    fixed = fixed.replace("http://localhost:", &format!("http://{}:", camera_ip));
+    fixed = fixed.replace("http://0.0.0.0:", &format!("http://{}:", camera_ip));
+
+    fixed
 }
 
 // Helper function to extract values from XML (simplified)
