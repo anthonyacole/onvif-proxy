@@ -72,25 +72,20 @@ impl DeviceService {
         // This ensures iSpy talks to us instead of trying to reach the camera directly
         let mut result = xml.to_string();
 
-        // Patterns to replace (Reolink typically uses these paths)
-        let patterns = vec![
-            ("/onvif/device_service", format!("{}/onvif/{}/device_service", base_url, camera_id)),
-            ("/onvif/media_service", format!("{}/onvif/{}/media_service", base_url, camera_id)),
-            ("/onvif/event_service", format!("{}/onvif/{}/event_service", base_url, camera_id)),
-            ("/onvif/ptz_service", format!("{}/onvif/{}/ptz_service", base_url, camera_id)),
-            ("/onvif/imaging_service", format!("{}/onvif/{}/imaging_service", base_url, camera_id)),
+        // Service path mappings
+        let services = vec![
+            "device_service",
+            "media_service",
+            "event_service",
+            "ptz_service",
+            "imaging_service",
         ];
 
-        for (pattern, replacement) in patterns {
-            // Replace in XAddr tags
-            result = result.replace(
-                &format!("<XAddr>http://", ),
-                &format!("<XAddr>{}", replacement),
-            );
-
-            // More robust replacement
-            let old_pattern = format!(">{}", pattern);
-            let new_pattern = format!(">{}", replacement);
+        for service in services {
+            // Match patterns like: <XAddr>http://192.168.30.11:8000/onvif/device_service</XAddr>
+            // Replace with: <XAddr>http://proxy:8000/onvif/camera-01/device_service</XAddr>
+            let old_pattern = format!("/onvif/{}", service);
+            let new_pattern = format!("{}/onvif/{}/{}", base_url, camera_id, service);
             result = result.replace(&old_pattern, &new_pattern);
         }
 

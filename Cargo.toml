@@ -39,5 +39,8 @@ thiserror = "1.0"
 # Async utilities
 futures = "0.3"
 
+# Network utilities
+local-ip-address = "0.6"
+
 [dev-dependencies]
 tokio-test = "0.4"
