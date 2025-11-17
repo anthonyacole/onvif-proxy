@@ -94,6 +94,7 @@ async fn handle_device_service(
 
     match response {
         Ok(xml) => {
+            tracing::debug!("Raw device response: {}", xml);
             // Apply translation quirks
             let quirks = camera.config().quirks.clone();
             let translated = match ResponseTranslator::translate(&xml, &camera.config().model, &quirks) {
@@ -103,6 +104,7 @@ async fn handle_device_service(
                     xml
                 }
             };
+            tracing::debug!("Translated device response: {}", translated);
 
             soap_response(translated)
         }
