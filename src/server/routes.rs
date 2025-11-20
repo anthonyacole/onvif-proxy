@@ -285,20 +285,10 @@ async fn handle_events_service(
         "CreatePullPointSubscription" => {
             state.events_service.create_pull_point_subscription(&camera, &state.base_url).await
         }
-        "PullMessages" => {
-            let timeout = extract_value(&body, "Timeout").unwrap_or("PT1S".to_string());
-            let message_limit = extract_value(&body, "MessageLimit")
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(10);
-            state.events_service.pull_messages(&camera, &timeout, message_limit).await
-        }
-        "Renew" => {
-            let sub_ref = ""; // Extract from request
-            state.events_service.renew_subscription(&camera, sub_ref).await
-        }
-        "Unsubscribe" => {
-            let sub_ref = ""; // Extract from request
-            state.events_service.unsubscribe(&camera, sub_ref).await
+        // PullMessages, Renew, and Unsubscribe should be called on the subscription endpoint, not here
+        "PullMessages" | "Renew" | "Unsubscribe" => {
+            tracing::warn!("Action {} should be called on subscription endpoint, not event_service", action);
+            return (StatusCode::BAD_REQUEST, format!("Action {} should be called on subscription endpoint", action)).into_response();
         }
         _ => {
             tracing::warn!("Unknown events action: {}", action);
@@ -340,6 +330,15 @@ async fn handle_subscription(
         }
     };
 
+    // Get the subscription to retrieve the camera's subscription URL
+    let subscription = match state.events_service.get_subscription(&sub_id).await {
+        Some(sub) => sub,
+        None => {
+            tracing::error!("Subscription not found: {}", sub_id);
+            return (StatusCode::NOT_FOUND, "Subscription not found").into_response();
+        }
+    };
+
     let envelope = match SoapEnvelope::parse(&body) {
         Ok(env) => env,
         Err(e) => {
@@ -355,13 +354,13 @@ async fn handle_subscription(
             let message_limit = extract_value(&body, "MessageLimit")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(10);
-            state.events_service.pull_messages(&camera, &timeout, message_limit).await
+            state.events_service.pull_messages(&sub_id, &timeout, message_limit).await
         }
         "Renew" => {
-            state.events_service.renew_subscription(&camera, &sub_id).await
+            state.events_service.renew_subscription(&camera, &subscription.camera_subscription_url, &sub_id).await
         }
         "Unsubscribe" => {
-            state.events_service.unsubscribe(&camera, &sub_id).await
+            state.events_service.unsubscribe(&camera, &subscription.camera_subscription_url, &sub_id).await
         }
         _ => {
             return (StatusCode::NOT_IMPLEMENTED, format!("Action not implemented: {}", action)).into_response();
